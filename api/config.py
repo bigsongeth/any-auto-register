@@ -108,6 +108,8 @@ CONFIG_KEYS = [
     "external_apps_update_mode",
     "ddg_keys_config",
     "ddg_daily_limit",
+    "mailtm_keys_config",
+    "mailtm_daily_limit",
     "contribution_enabled",
     "contribution_server_url",
     "contribution_key",

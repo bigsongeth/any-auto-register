@@ -3115,6 +3115,28 @@ class OAuthClient:
             tried_codes.add(code)
             self._log(f"尝试 OTP: {code}")
 
+            # DDG 转发可能延迟 20+ 分钟，提交 OTP 前先刷新页面 session 防止过期
+            self._log("刷新 OTP 验证 session...")
+            try:
+                refresh_url = state.current_url or state.continue_url or request_url
+                self._browser_pause(0.1, 0.2)
+                refresh_resp = self.session.get(
+                    refresh_url,
+                    headers=self._headers(
+                        refresh_url,
+                        accept="text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        navigation=True,
+                    ),
+                    allow_redirects=True,
+                    timeout=30,
+                )
+                if refresh_resp.status_code == 200:
+                    self._log("OTP 验证 session 已刷新")
+                else:
+                    self._log(f"OTP 验证 session 刷新警告: HTTP {refresh_resp.status_code}", "warning")
+            except Exception as e:
+                self._log(f"OTP 验证 session 刷新异常: {e}", "warning")
+
             try:
                 kwargs = {
                     "json": {"code": code},

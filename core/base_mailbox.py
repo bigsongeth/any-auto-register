@@ -357,6 +357,19 @@ def create_mailbox(
             daily_limit=daily_limit,
             proxy=proxy,
         )
+    elif provider == "mailtm":
+        from .mailtm_mailbox import MailTmMailbox
+
+        daily_limit_raw = extra.get("mailtm_daily_limit", 50)
+        try:
+            daily_limit = int(daily_limit_raw)
+        except (TypeError, ValueError):
+            daily_limit = 50
+        return MailTmMailbox(
+            keys_config=extra.get("mailtm_keys_config", "[]"),
+            daily_limit=daily_limit,
+            proxy=proxy,
+        )
     elif provider in {"outlook", "microsoft"}:
         return OutlookMailbox(
             imap_server=extra.get("outlook_imap_server", ""),

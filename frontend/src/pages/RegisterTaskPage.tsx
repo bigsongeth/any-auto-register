@@ -11,6 +11,7 @@ import {
   Space,
   Typography,
   Descriptions,
+  Alert,
 } from 'antd'
 import {
   PlayCircleOutlined,
@@ -126,6 +127,8 @@ export default function RegisterTaskPage() {
         luckmail_api_key: cfg.luckmail_api_key || '',
         luckmail_email_type: cfg.luckmail_email_type || '',
         luckmail_domain: cfg.luckmail_domain || '',
+        ddg_keys_config: cfg.ddg_keys_config || '',
+        ddg_daily_limit: cfg.ddg_daily_limit || '50',
       })
     })
   }, [form])
@@ -199,6 +202,8 @@ export default function RegisterTaskPage() {
       luckmail_domain: values.luckmail_domain,
       yescaptcha_key: values.yescaptcha_key,
       solver_url: values.solver_url,
+      ddg_keys_config: values.ddg_keys_config,
+      ddg_daily_limit: values.ddg_daily_limit,
     }
     const chatgptRegistrationRequestAdapter =
       buildChatGPTRegistrationRequestAdapter(
@@ -357,6 +362,7 @@ export default function RegisterTaskPage() {
                 { value: 'freemail', label: 'Freemail' },
                 { value: 'laoudo', label: 'Laoudo' },
                 { value: 'cfworker', label: 'CF Worker' },
+                { value: 'ddg', label: 'DuckDuckGo' },
               ]}
             />
           </Form.Item>
@@ -651,6 +657,15 @@ export default function RegisterTaskPage() {
                 <Input placeholder="outlook.com" />
               </Form.Item>
             </>
+          )}
+          {mailProvider === 'ddg' && (
+            <Alert
+              message="DDG 邮箱配置"
+              description="DDG Keys 与每日限额已从全局设置读取。如需修改，请前往【设置 -> 邮箱服务】。"
+              type="info"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
           )}
         </Card>
 

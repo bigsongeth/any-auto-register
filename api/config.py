@@ -106,6 +106,8 @@ CONFIG_KEYS = [
     "kiro_manager_path",
     "kiro_manager_exe",
     "external_apps_update_mode",
+    "ddg_keys_config",
+    "ddg_daily_limit",
     "contribution_enabled",
     "contribution_server_url",
     "contribution_key",
@@ -154,8 +156,61 @@ def get_config():
         all_cfg["contribution_server_url"] = "http://new.xem8k5.top:7317/"
     if not all_cfg.get("external_apps_update_mode"):
         all_cfg["external_apps_update_mode"] = "tag"
+    if not all_cfg.get("ddg_daily_limit"):
+        all_cfg["ddg_daily_limit"] = "50"
     # 只返回已知 key，未设置的返回空字符串
     return {k: all_cfg.get(k, "") for k in CONFIG_KEYS}
+
+
+@router.get("/ddg/status")
+def get_ddg_status():
+    """查询各 DDG Key 的今日用量状态。"""
+    import json as _json
+
+    raw = config_store.get("ddg_keys_config", "[]")
+    try:
+        keys = _json.loads(raw)
+    except (ValueError, _json.JSONDecodeError):
+        keys = []
+    if not isinstance(keys, list):
+        keys = []
+
+    valid_keys = [
+        item
+        for item in keys
+        if isinstance(item, dict)
+        and str(item.get("ddg_token") or "").strip()
+        and str(item.get("mail_inbox_url") or "").strip()
+    ]
+
+    if not valid_keys:
+        return {"keys": [], "total": 0, "message": "未配置有效的 DDG Key"}
+
+    daily_limit_raw = config_store.get("ddg_daily_limit", "50")
+    try:
+        daily_limit = int(daily_limit_raw)
+    except (TypeError, ValueError):
+        daily_limit = 50
+
+    from core.ddg_tracker import DdgUsageTracker
+
+    tracker = DdgUsageTracker(daily_limit=daily_limit)
+    statuses = tracker.get_all_status(len(valid_keys))
+
+    for i, status in enumerate(statuses):
+        if i < len(valid_keys):
+            status["label"] = valid_keys[i].get("label", f"Key-{i+1}")
+            # 隐藏敏感信息，只显示 token 前 8 位
+            token = str(valid_keys[i].get("ddg_token") or "")
+            if token.startswith("Bearer "):
+                token = token[7:]
+            status["token_preview"] = token[:8] + "..." if len(token) > 8 else token
+
+    return {
+        "keys": statuses,
+        "total": len(valid_keys),
+        "daily_limit": daily_limit,
+    }
 
 
 @router.put("")

@@ -3081,16 +3081,16 @@ class OAuthClient:
             otp_wait_seconds = int(
                 self.config.get(
                     "chatgpt_oauth_otp_wait_seconds",
-                    self.config.get("chatgpt_otp_wait_seconds", 600),
+                    self.config.get("chatgpt_otp_wait_seconds", 1200),
                 )
-                or 600
+                or 1200
             )
         except Exception:
-            otp_wait_seconds = 600
+            otp_wait_seconds = 1200
         otp_wait_seconds = max(30, min(otp_wait_seconds, 3600))
         otp_poll_window = min(30, max(10, otp_wait_seconds))
         try:
-            default_resend_wait_seconds = 45 if prefer_passwordless_login else 120
+            default_resend_wait_seconds = 45 if prefer_passwordless_login else 1200
             otp_resend_wait_seconds = int(
                 self.config.get(
                     "chatgpt_oauth_otp_resend_wait_seconds",
@@ -3102,8 +3102,8 @@ class OAuthClient:
                 or default_resend_wait_seconds
             )
         except Exception:
-            otp_resend_wait_seconds = 45 if prefer_passwordless_login else 120
-        otp_resend_wait_seconds = max(30, min(otp_resend_wait_seconds, 900))
+            otp_resend_wait_seconds = 45 if prefer_passwordless_login else 1200
+        otp_resend_wait_seconds = max(30, min(otp_resend_wait_seconds, 3600))
         otp_deadline = time.time() + otp_wait_seconds
         otp_sent_at = _otp_sent_at_baseline
         next_resend_at = time.time() + otp_resend_wait_seconds

@@ -112,6 +112,7 @@ class ChatGPTPlatform(BasePlatform):
                     pattern=None,
                     otp_sent_at=None,
                     exclude_codes=None,
+                    target_email=None,
                 ):
                     if not self._acct:
                         raise RuntimeError("邮箱账户尚未创建，无法获取验证码")
@@ -122,6 +123,7 @@ class ChatGPTPlatform(BasePlatform):
                         before_ids=self._before_ids,
                         otp_sent_at=otp_sent_at,
                         exclude_codes=exclude_codes,
+                        target_email=target_email or self._email,
                     )
 
                 def update_status(self, success, error=None):
@@ -162,6 +164,7 @@ class ChatGPTPlatform(BasePlatform):
                     pattern=None,
                     otp_sent_at=None,
                     exclude_codes=None,
+                    target_email=None,
                 ):
                     return _tmail.wait_for_code(
                         self._acct,
@@ -170,6 +173,7 @@ class ChatGPTPlatform(BasePlatform):
                         before_ids=self._before_ids,
                         otp_sent_at=otp_sent_at,
                         exclude_codes=exclude_codes,
+                        target_email=target_email,
                     )
 
                 def update_status(self, success, error=None):

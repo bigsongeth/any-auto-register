@@ -70,6 +70,8 @@ async def lifespan(app: FastAPI):
     yield
     from core.scheduler import scheduler as _scheduler
     _scheduler.stop()
+    from core.ddg_mailbox import _global_mail_cache
+    _global_mail_cache.stop()
     from services.solver_manager import stop
     stop()
 

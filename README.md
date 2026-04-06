@@ -240,13 +240,28 @@ start_backend.bat
 uv run python main.py
 ```
 
-启动后默认访问：
+或者使用 conda 环境（Mac/Linux 推荐）：
+
+```bash
+conda activate any-auto-register
+python main.py
+```
+
+启动后控制台会显示服务正在运行。此时后端会自动托管我们之前打包好的前端静态页面。
+
+#### 如何打开前端界面？
+
+启动了 `main.py` 之后，**你只需要打开浏览器**，访问以下地址即可看到 Web 管理界面：
 
 ```text
 http://localhost:8000
 ```
+*(你不需要再单独去启动什么前端服务，因为刚才你已经用 `npm run build` 打包好了，由 python 后端直接提供网页访问了)*
 
 > 如果你已经执行过 `pnpm --dir frontend build`，前端会由 FastAPI 直接托管，因此访问的是 `8000`，不是 `5173`。
+>
+> **前端开发模式补充说明：**
+> 只有当你**修改了 react 前端代码**，想要一边改一边看效果时，才需要双开终端，一个跑 `python main.py` 或 `uv run python main.py`，另外一个运行 `cd frontend && pnpm dev`。平时日常使用只跑后端即可。
 
 ## Windows 启动脚本说明
 

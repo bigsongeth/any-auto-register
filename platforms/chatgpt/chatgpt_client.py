@@ -949,7 +949,7 @@ class ChatGPTClient:
         birthdate,
         skymail_client,
         stop_before_about_you_submission=False,
-        otp_wait_timeout=600,
+        otp_wait_timeout=1200,
         otp_resend_wait_timeout=300,
     ):
         """
@@ -975,9 +975,9 @@ class ChatGPTClient:
         )
 
         try:
-            otp_wait_timeout = max(30, int(otp_wait_timeout or 600))
+            otp_wait_timeout = max(30, int(otp_wait_timeout or 1200))
         except Exception:
-            otp_wait_timeout = 600
+            otp_wait_timeout = 1200
         try:
             otp_resend_wait_timeout = max(30, int(otp_resend_wait_timeout or 300))
         except Exception:

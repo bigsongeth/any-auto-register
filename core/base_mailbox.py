@@ -344,6 +344,19 @@ def create_mailbox(
             domain=extra.get("luckmail_domain", ""),
             proxy=proxy,
         )
+    elif provider == "ddg":
+        from .ddg_mailbox import DuckDuckGoMailbox
+
+        daily_limit_raw = extra.get("ddg_daily_limit", 50)
+        try:
+            daily_limit = int(daily_limit_raw)
+        except (TypeError, ValueError):
+            daily_limit = 50
+        return DuckDuckGoMailbox(
+            keys_config=extra.get("ddg_keys_config", "[]"),
+            daily_limit=daily_limit,
+            proxy=proxy,
+        )
     elif provider in {"outlook", "microsoft"}:
         return OutlookMailbox(
             imap_server=extra.get("outlook_imap_server", ""),

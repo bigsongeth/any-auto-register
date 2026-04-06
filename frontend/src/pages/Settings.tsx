@@ -39,6 +39,7 @@ const SELECT_FIELDS: Record<string, { label: string; value: string }[]> = {
     { label: 'Cloudflare 邮件路由（直转邮箱）', value: 'cfrouting' },
     { label: 'Freemail（自建 CF Worker）', value: 'freemail' },
     { label: 'CF Worker（自建域名）', value: 'cfworker' },
+    { label: 'DuckDuckGo（DDG 别名 + CF 收件）', value: 'ddg' },
   ],
   maliapi_auto_domain_strategy: [
     { label: 'balanced', value: 'balanced' },
@@ -255,6 +256,7 @@ const TAB_ITEMS = [
           { key: 'luckmail_domain', label: '邮箱域名（可选）', placeholder: 'outlook.com / gmail.com' },
         ],
       },
+
     ],
   },
   {
@@ -815,6 +817,214 @@ function CFWorkerDomainPoolSection({ form }: { form: FormInstance<SettingsFormVa
   )
 }
 
+function AppleMailPoolImportSection({ form }: { form: any }) {
+  const [content, setContent] = useState('')
+  const [filename, setFilename] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [snapshot, setSnapshot] = useState<AppleMailPoolSnapshot | null>(null)
+  const [loadingSnapshot, setLoadingSnapshot] = useState(false)
+  const watchedPoolDir = Form.useWatch('applemail_pool_dir', form) || 'mail'
+  const watchedPoolFile = Form.useWatch('applemail_pool_file', form) || ''
+
+  const loadSnapshot = async () => {
+    setLoadingSnapshot(true)
+    try {
+      const params = new URLSearchParams()
+      if (String(watchedPoolDir || '').trim()) {
+        params.set('pool_dir', String(watchedPoolDir || '').trim())
+      }
+      if (String(watchedPoolFile || '').trim()) {
+        params.set('pool_file', String(watchedPoolFile || '').trim())
+      }
+      const result = await apiFetch(`/config/applemail/pool?${params.toString()}`)
+      setSnapshot(result)
+    } catch {
+      setSnapshot(null)
+    } finally {
+      setLoadingSnapshot(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadSnapshot()
+  }, [watchedPoolDir, watchedPoolFile])
+
+  const handleImport = async () => {
+    if (!content.trim()) {
+      message.error('请输入 JSON 或 TXT 内容')
+      return
+    }
+
+    setImporting(true)
+    try {
+      const poolDir = String(form.getFieldValue('applemail_pool_dir') || 'mail').trim() || 'mail'
+      const result = await apiFetch('/config/applemail/import', {
+        method: 'POST',
+        body: JSON.stringify({
+          content,
+          filename,
+          pool_dir: poolDir,
+          bind_to_config: true,
+        }),
+      })
+
+      form.setFieldsValue({
+        mail_provider: 'applemail',
+        applemail_pool_dir: result.pool_dir,
+        applemail_pool_file: result.filename,
+      })
+      setSnapshot({
+        filename: result.filename,
+        pool_dir: result.pool_dir,
+        count: result.count,
+        items: result.items || [],
+        truncated: Boolean(result.truncated),
+      })
+      setContent('')
+      setFilename('')
+      message.success(`导入成功，共 ${result.count} 个邮箱，已绑定 ${result.filename}`)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'AppleMail 内容导入失败'
+      message.error(errorMessage || 'AppleMail 内容导入失败')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  return (
+    <Card
+      title="AppleMail 内容导入"
+      extra={<span style={{ fontSize: 12, color: '#7a8ba3' }}>支持 JSON 或 TXT；导入后自动绑定当前邮箱池文件</span>}
+      style={{ marginBottom: 16 }}
+    >
+      <Space direction="vertical" style={{ width: '100%' }} size={12}>
+        <Typography.Text type="secondary">
+          支持数组/对象 JSON，也支持 `mail/*.txt` 那种每行一条的 `email----password----client_id----refresh_token` 格式。常见字段别名如 `clientId` / `refreshToken` / `folder` 会自动规范化。
+        </Typography.Text>
+        <Input
+          value={filename}
+          onChange={(event) => setFilename(event.target.value)}
+          placeholder="可选文件名，例如 applemail_hotmail.json；留空自动生成"
+        />
+        <Input.TextArea
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          rows={10}
+          placeholder={'[\n  {\n    "email": "demo@example.com",\n    "clientId": "xxxx",\n    "refreshToken": "xxxx",\n    "folder": "INBOX"\n  }\n]\n\n或粘贴 TXT:\ndemo@example.com----password----client_id----refresh_token'}
+          style={{ fontFamily: 'monospace' }}
+        />
+        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+          <Button
+            danger
+            onClick={() => {
+              setContent('')
+              setFilename('')
+            }}
+          >
+            清空
+          </Button>
+          <Space>
+            <Button onClick={() => void loadSnapshot()} loading={loadingSnapshot}>
+              刷新预览
+            </Button>
+            <Button type="primary" onClick={handleImport} loading={importing}>
+              确认导入
+            </Button>
+          </Space>
+        </Space>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Tag color="blue">已导入: {snapshot?.count || 0} 个邮箱</Tag>
+          {snapshot?.filename ? <Typography.Text type="secondary">当前文件: {snapshot.filename}</Typography.Text> : null}
+        </div>
+
+        <div
+          style={{
+            border: '1px solid rgba(127,127,127,0.25)',
+            borderRadius: 8,
+            padding: 12,
+            background: 'rgba(127,127,127,0.06)',
+            minHeight: 88,
+            maxHeight: 260,
+            overflowY: 'auto',
+            fontFamily: 'monospace',
+            fontSize: 13,
+            lineHeight: 1.7,
+          }}
+        >
+          {snapshot?.items?.length ? (
+            snapshot.items.map((item) => (
+              <div key={`${item.index}-${item.email}`}>
+                {item.index}. {item.email}
+              </div>
+            ))
+          ) : (
+            <Typography.Text type="secondary">当前还没有可预览的邮箱池内容。</Typography.Text>
+          )}
+        </div>
+        {snapshot?.truncated ? (
+          <Typography.Text type="secondary">预览只展示前 100 个邮箱，完整内容以文件为准。</Typography.Text>
+        ) : null}
+      </Space>
+    </Card>
+  )
+}
+
+function DDGKeysConfigSection({ form, onSave, saving, saved }: { form: any; onSave: () => void; saving: boolean; saved: boolean }) {
+  const mailProvider = form.getFieldValue('mail_provider')
+  if (mailProvider !== 'ddg') return null
+
+  return (
+    <Card
+      title="DuckDuckGo (DDG) Keys 配置"
+      extra={<span style={{ fontSize: 12, color: '#7a8ba3' }}>在这里添加多组 DDG Key，注册时将自动轮转使用</span>}
+      style={{ marginBottom: 16 }}
+    >
+      <Form.List name="ddg_keys_config">
+        {(fields, { add, remove }) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {fields.map((field, index) => (
+              <Card size="small" key={field.key} title={`Key ${index + 1}`} extra={<Button danger size="small" onClick={() => remove(field.name)}>删除</Button>}>
+                <Form.Item
+                  {...field}
+                  name={[field.name, 'label']}
+                  label="标识名"
+                  rules={[{ required: true, message: '请输入标识名' }]}
+                >
+                  <Input placeholder="例如: Key-1" />
+                </Form.Item>
+                <Form.Item
+                  {...field}
+                  name={[field.name, 'ddg_token']}
+                  label="DDG Token"
+                  rules={[{ required: true, message: '请输入 DDG Token' }]}
+                >
+                  <Input.Password placeholder="Bearer xxx（点击右侧小眼睛查看）" />
+                </Form.Item>
+                <Form.Item
+                  {...field}
+                  name={[field.name, 'mail_inbox_url']}
+                  label="CF 收件箱 URL"
+                  rules={[{ required: true, message: '请输入 CF 收件箱 URL' }]}
+                >
+                  <Input placeholder="https://..." />
+                </Form.Item>
+              </Card>
+            ))}
+            <Button type="dashed" onClick={() => add({ label: `Key-${fields.length + 1}`, ddg_token: '', mail_inbox_url: '' })} icon={<PlusOutlined />} block>
+              添加新 Key
+            </Button>
+            <Button type="primary" icon={<SaveOutlined />} onClick={onSave} loading={saving} block>
+              {saved ? '已保存 ✓' : '保存此配置'}
+            </Button>
+          </div>
+        )}
+      </Form.List>
+    </Card>
+  )
+}
+
+>>>>>>> d746ec6 (feat: DDG邮件缓存优化、CPA自动清理禁用、OTP重发间隔调整、双重时间戳修复)
 function SolverStatus() {
   const [running, setRunning] = useState<boolean | null>(null)
 
@@ -1729,6 +1939,11 @@ export default function Settings() {
       data.contribution_enabled = parseBooleanConfigValue(data.contribution_enabled)
       data.mail_import_source = configMailProvider === 'applemail' ? 'applemail' : 'microsoft'
       data.mail_provider = isMailImportProvider ? 'mail_import' : configMailProvider
+      try {
+        data.ddg_keys_config = JSON.parse(data.ddg_keys_config || '[]')
+      } catch {
+        data.ddg_keys_config = []
+      }
       form.setFieldsValue(data)
     })
   }, [form])
@@ -1791,6 +2006,7 @@ export default function Settings() {
       values.cfworker_random_subdomain = parseBooleanConfigValue(values.cfworker_random_subdomain)
       values.cfworker_random_name_subdomain = parseBooleanConfigValue(values.cfworker_random_name_subdomain)
       values.contribution_enabled = parseBooleanConfigValue(values.contribution_enabled)
+      values.ddg_keys_config = JSON.stringify(values.ddg_keys_config || [])
 
       await apiFetch('/config', { method: 'PUT', body: JSON.stringify({ data: values }) })
       form.setFieldsValue({
@@ -1804,6 +2020,7 @@ export default function Settings() {
         cfworker_random_subdomain: values.cfworker_random_subdomain,
         cfworker_random_name_subdomain: values.cfworker_random_name_subdomain,
         contribution_enabled: values.contribution_enabled,
+        ddg_keys_config: JSON.parse(values.ddg_keys_config || '[]'),
       })
       message.success('保存成功')
       setSaved(true)
@@ -1892,6 +2109,7 @@ export default function Settings() {
                   {activeTab === 'captcha' ? <SolverStatus /> : null}
                   {activeTab === 'mailbox' ? (
                     <>
+                      <DDGKeysConfigSection form={form} onSave={save} saving={saving} saved={saved} />
                       {mailboxSections.defaultSection ? (
                         <ConfigSection key={mailboxSections.defaultSection.title} section={mailboxSections.defaultSection} />
                       ) : null}

@@ -31,6 +31,7 @@ class EmailServiceAdapter:
             timeout=timeout,
             otp_sent_at=otp_sent_at,
             exclude_codes=exclude_codes or self._used_codes,
+            target_email=email,
         )
         if code:
             self._used_codes.add(code)

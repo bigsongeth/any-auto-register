@@ -240,7 +240,7 @@ function AppContent() {
             background: currentTheme.token?.colorBgLayout,
             marginLeft: collapsed ? 80 : 220,
             height: '100vh',
-            overflow: 'hidden',
+            overflow: 'auto',
           }}
         >
           <Routes>

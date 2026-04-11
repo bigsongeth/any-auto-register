@@ -2136,7 +2136,7 @@ export default function Settings() {
           />
         </div>
 
-        <div ref={contentPaneRef} style={{ flex: 1, overflowY: 'auto' }}>
+        <div ref={contentPaneRef} style={{ flex: 1, minWidth: 0 }}>
           {activeTab === 'integrations' ? (
             <IntegrationsPanel />
           ) : activeTab === 'security' ? (
